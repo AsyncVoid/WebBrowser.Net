@@ -15,23 +15,35 @@ namespace WBN.Render
         private string _rawHtml;
 
         public HtmlElement Root { get; set; }
-
         public int Length
         {
             get { return _rawHtml.Length; }
         }        
 
+        /// <summary>
+        /// Create a new HtmlParser
+        /// </summary>
+        /// <param name="raw">The raw html string</param>
         public HtmlParser(string raw)
         {
             _rawHtml = raw;
             Parse();
         }
 
+        /// <summary>
+        /// Init the parseing
+        /// </summary>
         private void Parse()
         {
+            //the html tag should alway be the first Element
            Root = IterateElement(_rawHtml)[0];
         }
 
+        /// <summary>
+        /// Parses raw atributes
+        /// </summary>
+        /// <param name="attribtesRaw">The raw attributes strubg</param>
+        /// <returns></returns>
         private Dictionary<string, string> ParseAttributes(string attribtesRaw)
         {
             var re = new Dictionary<string, string>();
@@ -65,6 +77,7 @@ namespace WBN.Render
 
                 foreach(var z in stringIndex)
                 {
+                    //replace origonal value back in
                     val = val.Replace("\"" + z.Key + "\"", z.Value);
                 }
 
@@ -75,18 +88,24 @@ namespace WBN.Render
             return re;
         }
 
-        
-
+        /// <summary>
+        /// Main Parser loop
+        /// </summary>
+        /// <param name="raw">The raw html</param>
+        /// <returns></returns>
         private List<HtmlElement> IterateElement(string raw)
-        {            
+        {
+            var reList = new List<HtmlElement>();
+
+            //tmp vars
             byte parseState = 0;
             byte ParseDepth = 0;
             string tmpName = "";
             string tmpBody = "";
             string tmpAttribute = "";
-            var re = new HtmlElement();
-            var reList = new List<HtmlElement>();
-
+            var tmpElement = new HtmlElement();
+            
+            //main loop
             for (int i = 0; i < raw.Length; i++)
             {
                 var x = raw[i];
@@ -94,57 +113,70 @@ namespace WBN.Render
                 switch (parseState)
                 {
                     case 0:
+                        // we are in open tag
                         if (x == '<')
                         {
                             parseState = 1;
                         }
                         break;
                     case 1:
-                        if (x == ' ')
+                        if (x == ' ')// there are attributes
                         {
                             parseState = 2;
                         }
                         else
                         {
-                            if (x == '>')
+                            if (x == '>')// no attributes in this tag
                             {
                                 parseState = 3;
-                                re.Name = tmpName.Trim();
+                                tmpElement.Name = tmpName.Trim();// we have the name store it
                                 tmpName = "";
+
+                                //set the atributes to zero
+                                tmpElement.Attributes = new Dictionary<string, string>();
+
                             }
                             else
                             {
-                                tmpName += x;
+                                tmpName += x;//build tag name
                             }
                         }
                         break;
                     case 2:
-                        if (x == '>')
+                        if (x == '>')//tag is done
                         {
                             parseState = 3;
-                            re.Name = tmpName.Trim();
+                            tmpElement.Name = tmpName.Trim();// we have the name store it
                             tmpName = "";
 
-                            re.InnerAttributes = tmpAttribute.Trim();
+                            tmpElement.InnerAttributes = tmpAttribute.Trim();// we have the attributes store there raw form
                             tmpAttribute = "";
 
-                            re.Attributes = ParseAttributes(re.InnerAttributes);
+                            //parse the raw attribtes
+                            tmpElement.Attributes = ParseAttributes(tmpElement.InnerAttributes);
                         }
                         else
                         {
+                            //build the attributes raw
                             tmpAttribute += x;
                         }
                         break;
                     case 3:
-                        if (x == '<' && raw[i + 1] == '/' && ParseDepth == 0)
+                        if (x == '<' && raw[i + 1] == '/' && ParseDepth == 0)//we have found the closing tag
                         {
                             parseState = 4;
-                            re.InnerHtml = tmpBody.Trim();
+                            tmpElement.InnerHtml = tmpBody.Trim();// we have the body store it
                             tmpBody = "";
                         }
-                        else
+                        else //we are in the elements body
                         {
-                            //<tag></tag>
+                            /*
+                             * 
+                             * Myvar:
+                             * This is the system i use to make sure all the open tags are matching there closing tags
+                             */
+
+                            //depth cheack
                             if (x == '<')
                             {
                                 ParseDepth += 2;
@@ -157,7 +189,8 @@ namespace WBN.Render
                             {
                                 ParseDepth--;
                             }
-                            //we are in the elements body
+
+                            //build the elment body
                             tmpBody += x;
                         }
                         break;
@@ -171,16 +204,17 @@ namespace WBN.Render
                         if (x == '>')
                         {
                             parseState = 6;
+                            // we are done with this element
 
-
-                            if (re.Name == tmpName.Trim())
+                            if (tmpElement.Name == tmpName.Trim())
                             {
-                                re.Children = IterateElement(re.InnerHtml);
-                                reList.Add(re);
+                                //here we recursively parse the body
+                                tmpElement.Children = IterateElement(tmpElement.InnerHtml);
+                                reList.Add(tmpElement);
                             }
                             else
                             {
-                                //noclosing tag error
+                                //TODO: no closing tag error
                             }
 
 
@@ -191,15 +225,12 @@ namespace WBN.Render
                             tmpName = "";
                             tmpBody = "";
                             tmpAttribute = "";
-                            re = new HtmlElement();
+                            tmpElement = new HtmlElement();
                         }
                         else
                         {
                             //closing tag name
                             tmpName += x;
-
-                            
-                            
                         }
                         break;
                 }
@@ -209,6 +240,11 @@ namespace WBN.Render
             return reList;
         }
 
+        /// <summary>
+        /// Create a new HtmlParser from a file
+        /// </summary>
+        /// <param name="file">The file path</param>
+        /// <returns></returns>
         public static HtmlParser FromFile(string file)
         {
             return new HtmlParser(File.ReadAllText(file));

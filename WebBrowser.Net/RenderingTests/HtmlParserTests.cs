@@ -28,7 +28,7 @@ namespace RenderingTests
         [TestMethod]
         public void RootElementInnerAttributeParse()
         {
-            Assert.AreEqual(new HtmlParser("<root test=fudge></root>").Root.InnerAttribute, "test=fudge");
+            Assert.AreEqual(new HtmlParser("<root test=fudge></root>").Root.InnerAttributes, "test=fudge");
         }
     }
 }
