@@ -35,8 +35,8 @@ namespace WBN.Render
         /// </summary>
         private void Parse()
         {
-            //the html tag should alway be the first Element
-           Root = IterateElement(_rawHtml)[0];
+            var x = IterateElement(_rawHtml);
+           Root = x[0];
         }
 
         /// <summary>
@@ -54,10 +54,14 @@ namespace WBN.Render
             List<string> tmp = new List<string>();
             foreach (Match match in Regex.Matches(attribtesRaw, "\"(?<data>([^\"]*))\""))
             {
+               
                 var val = match.Groups["data"].Value;
-                if (!tmp.Contains(val))
+                if (val != "")
                 {
-                    tmp.Add(val);
+                    if (!tmp.Contains(val))
+                    {
+                        tmp.Add(val);
+                    }
                 }
             }
 
@@ -65,23 +69,34 @@ namespace WBN.Render
             foreach(var i in tmp)
             {
                 string placeHolder = "{{" + Utils.RandomString(5) + "}}";
+                while(stringIndex.ContainsKey(placeHolder))
+                {
+                    placeHolder = "{{" + Utils.RandomString(5) + "}}";
+                }
                 stringIndex.Add(placeHolder, i);
                 attribtesRaw = attribtesRaw.Replace(i, placeHolder);
             }
 
             //parse string safe atrubutes now
-            foreach(var i in attribtesRaw.Split(' '))
+            foreach(var i in attribtesRaw.Split(new char[] {' ' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 var x = i.Trim().Split('=');
-                var val = x[1].Trim();
-
-                foreach(var z in stringIndex)
+                if (x.Length == 1)
                 {
-                    //replace origonal value back in
-                    val = val.Replace("\"" + z.Key + "\"", z.Value);
+                    re.Add(x[0].Trim(), "");
                 }
+                else
+                {
+                    var val = x[1].Trim();
 
-                re.Add(x[0].Trim(), val);
+                    foreach (var z in stringIndex)
+                    {
+                        //replace origonal value back in
+                        val = val.Replace("\"" + z.Key + "\"", z.Value);
+                    }
+
+                    re.Add(x[0].Trim(), val);
+                }
             }
 
 
@@ -95,16 +110,23 @@ namespace WBN.Render
         /// <returns></returns>
         private List<HtmlElement> IterateElement(string raw)
         {
+            if(raw == null)
+            {
+                return new List<HtmlElement>() { };
+            }
+
             var reList = new List<HtmlElement>();
 
             //tmp vars
+            bool flagHtmlDef = false;
+            bool skipCloseTagGt = false;
             byte parseState = 0;
             byte ParseDepth = 0;
             string tmpName = "";
             string tmpBody = "";
             string tmpAttribute = "";
             var tmpElement = new HtmlElement();
-            
+
             //main loop
             for (int i = 0; i < raw.Length; i++)
             {
@@ -117,6 +139,10 @@ namespace WBN.Render
                         if (x == '<')
                         {
                             parseState = 1;
+                            if (raw[i + 1] == '!')
+                            {
+                                flagHtmlDef = true;//by pass <!DOCTYPE html>
+                            }
                         }
                         break;
                     case 1:
@@ -145,7 +171,15 @@ namespace WBN.Render
                     case 2:
                         if (x == '>')//tag is done
                         {
-                            parseState = 3;
+                            if (flagHtmlDef)
+                            {
+                                parseState = 5;
+                                i--;
+                            }
+                            else
+                            {
+                                parseState = 3;
+                            }
                             tmpElement.Name = tmpName.Trim();// we have the name store it
                             tmpName = "";
 
@@ -154,11 +188,28 @@ namespace WBN.Render
 
                             //parse the raw attribtes
                             tmpElement.Attributes = ParseAttributes(tmpElement.InnerAttributes);
+
                         }
                         else
                         {
-                            //build the attributes raw
-                            tmpAttribute += x;
+                            if (x == '/' && raw[i + 1] == '>')
+                            {
+                                parseState = 5;
+
+                                tmpElement.Name = tmpName.Trim();// we have the name store it
+                                tmpName = "";
+
+                                tmpElement.InnerAttributes = tmpAttribute.Trim();// we have the attributes store there raw form
+                                tmpAttribute = "";
+
+                                //parse the raw attribtes
+                                tmpElement.Attributes = ParseAttributes(tmpElement.InnerAttributes);
+                            }
+                            else
+                            {
+                                //build the attributes raw
+                                tmpAttribute += x;
+                            }
                         }
                         break;
                     case 3:
@@ -167,6 +218,7 @@ namespace WBN.Render
                             parseState = 4;
                             tmpElement.InnerHtml = tmpBody.Trim();// we have the body store it
                             tmpBody = "";
+                            skipCloseTagGt = false;
                         }
                         else //we are in the elements body
                         {
@@ -177,17 +229,22 @@ namespace WBN.Render
                              */
 
                             //depth cheack
-                            if (x == '<')
+                            if (x == '<' && raw[i + 1] == '/')
                             {
-                                ParseDepth += 2;
+                                ParseDepth += 1;
+                                skipCloseTagGt = true;
                             }
-                            if (x == '/')
-                            {
-                                ParseDepth -= 2;
-                            }
+                           
                             if (x == '>')
                             {
-                                ParseDepth--;
+                                if (skipCloseTagGt)
+                                {
+                                    skipCloseTagGt = false;
+                                }
+                                else
+                                {
+                                    ParseDepth--;
+                                }
                             }
 
                             //build the elment body
@@ -206,18 +263,12 @@ namespace WBN.Render
                             parseState = 6;
                             // we are done with this element
 
-                            if (tmpElement.Name == tmpName.Trim())
+                            if (!flagHtmlDef)
                             {
                                 //here we recursively parse the body
                                 tmpElement.Children = IterateElement(tmpElement.InnerHtml);
                                 reList.Add(tmpElement);
                             }
-                            else
-                            {
-                                //TODO: no closing tag error
-                            }
-
-
 
                             //reset for next element
                             parseState = 0;
@@ -225,6 +276,7 @@ namespace WBN.Render
                             tmpName = "";
                             tmpBody = "";
                             tmpAttribute = "";
+                            flagHtmlDef = false;
                             tmpElement = new HtmlElement();
                         }
                         else
@@ -237,6 +289,11 @@ namespace WBN.Render
 
             }
 
+            if (tmpElement.Name != null)
+            {
+                tmpElement.Children = IterateElement(tmpBody);
+                reList.Add(tmpElement);
+            }
             return reList;
         }
 
