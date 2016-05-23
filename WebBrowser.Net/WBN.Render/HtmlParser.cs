@@ -18,7 +18,7 @@ namespace WBN.Render
         public int Length
         {
             get { return _rawHtml.Length; }
-        }        
+        }
 
         /// <summary>
         /// Create a new HtmlParser
@@ -54,7 +54,6 @@ namespace WBN.Render
             List<string> tmp = new List<string>();
             foreach (Match match in Regex.Matches(attribtesRaw, "\"(?<data>([^\"]*))\""))
             {
-               
                 var val = match.Groups["data"].Value;
                 if (val != "")
                 {
@@ -223,7 +222,7 @@ namespace WBN.Render
                         else //we are in the elements body
                         {
                             /*
-                             * 
+                             *
                              * Myvar:
                              * This is the system i use to make sure all the open tags are matching there closing tags
                              */
@@ -234,7 +233,7 @@ namespace WBN.Render
                                 ParseDepth += 1;
                                 skipCloseTagGt = true;
                             }
-                           
+
                             if (x == '>')
                             {
                                 if (skipCloseTagGt)

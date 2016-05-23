@@ -4,15 +4,17 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{A8740D92-AE5B-4FA5-AF5A-FA4D23044028}</ProjectGuid>
-    <OutputType>Library</OutputType>
+    <ProjectGuid>{534D7C93-224B-45D1-9F04-DFED6A212A25}</ProjectGuid>
+    <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>WBN.Net</RootNamespace>
-    <AssemblyName>WBN.Net</AssemblyName>
+    <RootNamespace>AsyncPlayGround</RootNamespace>
+    <AssemblyName>AsyncPlayGround</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
@@ -22,6 +24,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
     <OutputPath>bin\Release\</OutputPath>
@@ -40,11 +43,21 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Field.cs" />
-    <Compile Include="HttpClient.cs" />
-    <Compile Include="HttpHeader.cs" />
-    <Compile Include="HttpResponse.cs" />
+    <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="App.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\WBN.Net\WBN.Net.csproj">
+      <Project>{a8740d92-ae5b-4fa5-af5a-fa4d23044028}</Project>
+      <Name>WBN.Net</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\WBN.Render\WBN.Render.csproj">
+      <Project>{247b8676-b061-4bc6-b0e6-24261f893ccc}</Project>
+      <Name>WBN.Render</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
